@@ -758,11 +758,12 @@ func TestService_UpdateMemory_SoftDelete_RotateMemory_ReviveDeletedRow(t *testin
 			"fact", nil, nil, nil, now, now,
 		))
 	// Content changes → new ID "mem-B" → rotateMemory:
-	// BEGIN + pre-check (no conflict) + soft-delete A + INSERT B (with ON DUPLICATE KEY) + COMMIT.
+	// BEGIN + pre-check (target B is soft-deleted, active=false) +
+	// soft-delete A + INSERT B (with ON DUPLICATE KEY UPDATE to revive) + COMMIT.
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT deleted_at IS NULL FROM memories").
 		WithArgs(sqlmock.AnyArg(), key.AppName, key.UserID).
-		WillReturnError(sql.ErrNoRows)
+		WillReturnRows(sqlmock.NewRows([]string{"active"}).AddRow(false))
 	mock.ExpectExec("UPDATE").
 		WithArgs(sqlmock.AnyArg(), key.MemoryID, key.AppName, key.UserID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
